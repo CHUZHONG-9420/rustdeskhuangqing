@@ -19,9 +19,7 @@ import 'model.dart';
 
 const kLoginDialogTag = "LOGIN";
 
-const kUseTemporaryPassword = "use-temporary-password";
 const kUsePermanentPassword = "use-permanent-password";
-const kUseBothPasswords = "use-both-passwords";
 
 class ServerModel with ChangeNotifier {
   bool _isStart = false; // Android MainService status
@@ -34,8 +32,6 @@ class ServerModel with ChangeNotifier {
   bool hideCm = false;
   int _connectStatus = 0; // Rendezvous Server status
   String _verificationMethod = "";
-  String _temporaryPasswordLength = "";
-  bool _allowNumericOneTimePassword = false;
   String _approveMode = "";
   int _zeroClientLengthCounter = 0;
 
@@ -69,15 +65,7 @@ class ServerModel with ChangeNotifier {
   int get connectStatus => _connectStatus;
 
   String get verificationMethod {
-    final index = [
-      kUseTemporaryPassword,
-      kUsePermanentPassword,
-      kUseBothPasswords
-    ].indexOf(_verificationMethod);
-    if (index < 0) {
-      return kUseBothPasswords;
-    }
-    return _verificationMethod;
+    return kUsePermanentPassword;
   }
 
   String get approveMode => _approveMode;
@@ -92,17 +80,6 @@ class ServerModel with ChangeNotifier {
     */
   }
 
-  String get temporaryPasswordLength {
-    final lengthIndex = ["6", "8", "10"].indexOf(_temporaryPasswordLength);
-    if (lengthIndex < 0) {
-      return "6";
-    }
-    return _temporaryPasswordLength;
-  }
-
-  setTemporaryPasswordLength(String length) async {
-    await bind.mainSetOption(key: "temporary-password-length", value: length);
-  }
 
   setApproveMode(String mode) async {
     await bind.mainSetOption(key: kOptionApproveMode, value: mode);
@@ -114,11 +91,6 @@ class ServerModel with ChangeNotifier {
     */
   }
 
-  bool get allowNumericOneTimePassword => _allowNumericOneTimePassword;
-  switchAllowNumericOneTimePassword() async {
-    await mainSetBoolOption(
-        kOptionAllowNumericOneTimePassword, !_allowNumericOneTimePassword);
-  }
 
   TextEditingController get serverId => _serverId;
 
@@ -229,54 +201,14 @@ class ServerModel with ChangeNotifier {
 
   updatePasswordModel() async {
     var update = false;
-    final temporaryPassword = await bind.mainGetTemporaryPassword();
-    final verificationMethod =
-        await bind.mainGetOption(key: kOptionVerificationMethod);
-    final temporaryPasswordLength =
-        await bind.mainGetOption(key: "temporary-password-length");
-    final approveMode = await bind.mainGetOption(key: kOptionApproveMode);
-    final numericOneTimePassword =
-        await mainGetBoolOption(kOptionAllowNumericOneTimePassword);
-    /*
-    var hideCm = option2bool(
-        'allow-hide-cm', await bind.mainGetOption(key: 'allow-hide-cm'));
-    if (!(approveMode == 'password' &&
-        verificationMethod == kUsePermanentPassword)) {
-      hideCm = false;
-    }
-    */
-    if (_approveMode != approveMode) {
-      _approveMode = approveMode;
-      update = true;
-    }
-    var stopped = await mainGetBoolOption(kOptionStopService);
-    final oldPwdText = _serverPasswd.text;
-    if (stopped ||
-        verificationMethod == kUsePermanentPassword ||
-        _approveMode == 'click') {
-      _serverPasswd.text = '-';
-    } else {
-      if (_serverPasswd.text != temporaryPassword &&
-          temporaryPassword.isNotEmpty) {
-        _serverPasswd.text = temporaryPassword;
-      }
-    }
-    if (oldPwdText != _serverPasswd.text) {
-      update = true;
+    final verificationMethod = kUsePermanentPassword;
+    final permanentPassword = bind.mainGetPermanentPassword();
+    if (_serverPasswd.text != permanentPassword &&
+        permanentPassword.isNotEmpty) {
+      _serverPasswd.text = permanentPassword;
     }
     if (_verificationMethod != verificationMethod) {
       _verificationMethod = verificationMethod;
-      update = true;
-    }
-    if (_temporaryPasswordLength != temporaryPasswordLength) {
-      if (_temporaryPasswordLength.isNotEmpty) {
-        bind.mainUpdateTemporaryPassword();
-      }
-      _temporaryPasswordLength = temporaryPasswordLength;
-      update = true;
-    }
-    if (_allowNumericOneTimePassword != numericOneTimePassword) {
-      _allowNumericOneTimePassword = numericOneTimePassword;
       update = true;
     }
     /*
